@@ -37,8 +37,12 @@ cd project_name
 python3 manage.py runserver #test if you have the website available on localhost
 
 #next step is to push this version
-
-
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/fork71enthropy/BookingSystem.git
+git push -u origin main
 
 
 
