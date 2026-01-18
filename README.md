@@ -44,10 +44,11 @@ git branch -M main
 git remote add origin https://github.com/fork71enthropy/BookingSystem.git
 git push -u origin main
 ```
-4. Commands for packages installation for api development
+4. Commands for packages installation for api development and app creation
 `code inline`
 ```bash
 #Bloc of bash code
+python3 manage.py startapp LittleLemonAPI
 #REST best practices : KISS,filter && order && paginate,versionning,caching,rate limiting,monitoring (status code and 
 #network bandwith)
 #Security and authentication in rest api : 
