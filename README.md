@@ -77,8 +77,12 @@ python3 manage.py startapp LittleLemonAPI
 #"Error establishing SSH connection to your instance. Try again later."
 ```
 
-
-
+6. Commandes sur une nouvelle instance ec2
+`code inline`
+```bash
+ssh root@54.198.81.214
+adduser monuser
+usermod -aG sudo monuser
 
 
 
