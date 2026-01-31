@@ -57,7 +57,25 @@ python3 manage.py startapp LittleLemonAPI
 #firewall application on your server
 
 #Access control: Roles(Collection of privileges) and privileges(authority to do a task)
+```
+5. Configurations of an AWS ec2 instance
+`code inline`
+```bash
+#Nom : mon_premier_serveur_payant
+#AMI : Amazon Linux 2023 kernel-6.1
+#Type d'instance : t3.micro (2 vCPU, 1 GiB Memory)
+#Stockage : 8 GiB gp3
+#Groupe de sécurité : Nouveau groupe avec SSH activé depuis votre IP
 
+#Steps,rules: 1. key pairs : il faut sauvegarder le fichier .pem en lieu sûr
+#             2. security group : ssh,https and http have to be activated. SSH has to be limited to "my ip"
+#             3. storage : 16 to 20 gigabytes ; df -h to view the usage rate... Advice : start with 8 gigs
+#             4. launch instance : output : "Successfully initiated launch of instance (i-0ec95642bdef77c3b)"
+#             5. click on the instance link
+#             6. public ip address : 54.198.81.214
+#             7. secure your ssh keys 
+#"Error establishing SSH connection to your instance. Try again later."
+```
 
 
 
