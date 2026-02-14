@@ -1,7 +1,7 @@
 # Exemple de README qui respecte les standards et best practices
 
 ## Structure d'un projet standard (de très petite taille)
-
+```
 mon-projet-django/
 ├── README.md                          # Vue d'ensemble + Quick start
 │
@@ -41,3 +41,4 @@ mon-projet-django/
 ├── templates/
 │
 └── requirements.txt
+```
