@@ -1,4 +1,4 @@
-# Exemple de README qui respecte les standards et best practices
+# Exemple de README qui respecte les standards et best practices (à but éducatif, rien à voir avec ce projet)
 
 ## Structure d'un projet standard (de très petite taille)
 ```
