@@ -97,7 +97,9 @@ ssh root@IP_DU_SERVEUR
 
 # Créer un utilisateur non-root
 adduser monuser
-usermod -aG sudo monuser
+
+# Ajouter monuser au groupe wheel (pour lui donner les droits sudo)
+sudo usermod -aG wheel monuser
 
 # Configurer SSH avec clés (sur votre machine locale)
 ssh-keygen -t ed25519

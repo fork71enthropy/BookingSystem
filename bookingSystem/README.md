@@ -89,5 +89,30 @@ Configurer un serveur WSGI (Gunicorn) et un reverse proxy (Nginx)
 #click on the link, now the vps is online
 #connect to the vps
 #3)point the domain name on the vps (configure it on the domain name provider)
-#I have already done it, I will come back later to complete this part, I promise
+#Open your OVH cloud account
+#click on Domain names/website_domain_name/DNS zone
+#click on add an entry and add this 1st record
+```
+```
+Type: A
+Sous-domaine: (laissez vide ou mettez @)
+Target: 16.171.116.66
+TTL: 3600
+```
+`code inline`
+```bash
+#click a second time on "add an entry" and add this second record
+```
+```
+Type: A
+Sous-domaine: www
+Target: 16.171.116.66
+TTL: 3600
+```
+`code inline`
+```bash
+#click on "Apply configuration" or "valider"
 #4)Docker installation (containerize an app using docker)
+
+#16.171.116.66 ip du serveur
+```
