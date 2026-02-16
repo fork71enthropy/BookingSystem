@@ -442,6 +442,63 @@ docker compose logs web --tail=30
 
 ### **PHASE 8 : CERTIFICAT SSL (HTTPS)**
 
+
+
+```bash
+# Création du fichier .gitignore (j'avais oublié)
+nano .gitignore
+
+# Ajouter ce contenu
+```
+```
+# Fichiers secrets - NE JAMAIS COMMIT
+.env
+*.env
+.env.local
+.env.production
+
+# Base de données
+db.sqlite3
+*.sqlite3
+
+# Fichiers Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Django
+*.log
+local_settings.py
+staticfiles/
+media/
+
+# Certificats SSL
+certbot/
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+*.bak
+*.backup
+```
+
+
 ```bash
 # Arrêter nginx temporairement
 docker compose stop nginx
