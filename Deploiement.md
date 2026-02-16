@@ -101,22 +101,72 @@ adduser monuser
 # Ajouter monuser au groupe wheel (pour lui donner les droits sudo)
 sudo usermod -aG wheel monuser
 
-# Configurer SSH avec clés (sur votre machine locale)
-ssh-keygen -t ed25519
-ssh-copy-id monuser@IP_DU_SERVEUR
+# Configurer SSH avec clés 
+#(sur votre machine locale)
+# 1. Générer une paire de clés SSH
+ssh-keygen -t ed25519 -C "votre@email.com"
+# Appuyez sur Entrée 3 fois (emplacement par défaut, pas de passphrase)
+# 2. Afficher votre clé publique
+cat ~/.ssh/id_ed25519.pub
+# Vous verrez quelque chose comme :
+# ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... votre@email.com
+# COPIEZ tout ce texte (Ctrl+Shift+C)
 
-# Désactiver la connexion root + mot de passe
+
+#Sur le serveur AWS (dans le terminal AWS Console) :
+# Basculer vers monuser
+sudo su - monuser
+# Créer le dossier .ssh
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+# Créer et éditer le fichier authorized_keys
+nano ~/.ssh/authorized_keys
+# COLLEZ votre clé publique (clic droit → Paste)
+# Ctrl+X, puis Y, puis Entrée pour sauvegarder
+# Définir les bonnes permissions
+chmod 600 ~/.ssh/authorized_keys
+# Vérifier que c'est bon
+cat ~/.ssh/authorized_keys
+# Revenir à ec2-user
+exit
+
+#Plus tard, vous pourrez directement vous connecter à votre serveur via la commande
+ssh monuser@opus-symmetry.fr
+
+
+# Désactiver la connexion root + mot de passe; il faut que personne ne puisse se connecter avec un mot de passe
 sudo nano /etc/ssh/sshd_config
 # PermitRootLogin no
 # PasswordAuthentication no
 
-# Configurer le firewall
-sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP
-sudo ufw allow 443/tcp   # HTTPS
-sudo ufw enable
+# Redémarrer SSH pour appliquer les changements
+sudo systemctl restart sshd
 
-# Mises à jour
+
+
+# Installer firewalld
+sudo yum install firewalld -y
+
+# Démarrer firewalld
+sudo systemctl start firewalld
+sudo systemctl enable firewalld
+
+# Autoriser SSH (port 22)
+sudo firewall-cmd --permanent --add-service=ssh
+
+# Autoriser HTTP (port 80)
+sudo firewall-cmd --permanent --add-service=http
+
+# Autoriser HTTPS (port 443)
+sudo firewall-cmd --permanent --add-service=https
+
+# Recharger la configuration
+sudo firewall-cmd --reload
+
+# Vérifier le statut
+sudo firewall-cmd --list-all
+
+# Mises à jour, pas obligatoire, et il faut installer apt avant
 sudo apt update && sudo apt upgrade -y
 ```
 
@@ -127,16 +177,48 @@ sudo apt update && sudo apt upgrade -y
 ### **PHASE 4 : INSTALLATION DE DOCKER**
 
 ```bash
-# Installer Docker + Docker Compose
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+# Installer Docker via les dépôts Amazon Linux
+sudo yum install docker -y
+
+# Démarrer Docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Ajouter votre utilisateur au groupe docker
 sudo usermod -aG docker $USER
 
-# Tester
-docker --version
-docker compose version
-```
 
+# Docker Compose plugin n'est pas disponible, dans les dépots amazon linux standards, donc on va l'installer 
+#manuellement
+
+# Créer le répertoire pour les plugins Docker
+mkdir -p ~/.docker/cli-plugins/
+
+# Télécharger Docker Compose v2
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o ~/.docker/cli-plugins/docker-compose
+
+# Rendre le fichier exécutable
+chmod +x ~/.docker/cli-plugins/docker-compose
+
+# Vérifier l'installation
+docker compose version
+
+#Après installation, déconnexion 
+exit
+
+#Puis reconnexion
+ssh monuser@16.171.116.66
+
+# Vérifier Docker
+docker --version
+
+# Vérifier Docker Compose
+docker compose version
+
+# Tester
+docker run hello-world
+
+```
 **✅ Checkpoint** : `docker run hello-world` fonctionne
 
 ---
@@ -144,35 +226,70 @@ docker compose version
 ### **PHASE 5 : DÉPLOIEMENT DE L'APPLICATION**
 
 ```bash
-# Cloner votre projet
+# 1. Se placer dans le home
 cd ~
-mkdir apps && cd apps
-git clone https://github.com/vous/votre-projet.git
-cd votre-projet
 
-# Créer le fichier .env avec les vraies valeurs
+# 2. Créer le dossier apps
+mkdir -p apps && cd apps
+
+# 3. Installer Git (si pas déjà fait)
+sudo yum install git -y
+
+# 4. Cloner votre projet
+git clone https://github.com/fork7ienthropy/myblog71.git
+
+# 5. Aller dans le dossier de l'application
+cd myblog71/joel_blog
+
+# 6. Vérifier qu'on est au bon endroit
+pwd
+# Devrait afficher : /home/monuser/apps/myblog71/joel_blog
+
+# 7. Créer le Dockerfile
+nano Dockerfile
+
+# 8. Créer docker-compose.yml
+nano docker-compose.yml
+
+# 9. Créer le fichier .env
 nano .env
 
-# Structure typique :
-# - app/ (votre code)
-# - nginx/ (config nginx)
-# - Dockerfile
-# - docker-compose.yml
-# - .env
+# 10. Modifier settings.py
+# - DEBUG = False
+# - Supprimer SECRET_KEY et la mettre dans .env
 
-# Lancer l'application
-docker compose up -d --build
+# 11. Construire l'image Docker (BUILD CLASSIQUE)
+docker build -t joel_blog-web .
 
-# Vérifier
+# 12. Lancer les containers
+docker compose up -d
+
+# 13. Vérifier que ça tourne
 docker compose ps
 docker compose logs -f
-```
 
+# EN CAS D'ERREUR - Boucle de debug :
+docker compose down
+docker system prune -f
+# Corriger le problème
+docker build -t joel_blog-web .
+docker compose up -d
+docker compose logs -f web
+```
 **✅ Checkpoint** : Votre app tourne, accessible sur http://IP_DU_SERVEUR
 
 ---
 
+
+
+
 ### **PHASE 6 : CONFIGURATION NGINX**
+
+```bash
+#vérifier que vous êtes dans le dossier contenant manage.py
+mkdir nginx ; cd nginx ; nano nginx.conf 
+
+```
 
 ```nginx
 # nginx/nginx.conf - Configuration initiale (HTTP seulement)
@@ -182,31 +299,148 @@ events {
 }
 
 http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    upstream django {
+        server web:8000;  # ⚠️ "web" doit correspondre au service dans docker-compose.yml
+    }
+
     server {
         listen 80;
-        server_name monapp.com www.monapp.com;
-        
-        # Pour Let's Encrypt
+        server_name opus-symmetry.fr www.opus-symmetry.fr;
+
+        client_max_body_size 100M;
+
+        # Pour Let's Encrypt (Phase 8)
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
         }
-        
-        # Proxy vers votre app
+
+        # Servir les fichiers statiques
+        location /static/ {
+            alias /app/staticfiles/;
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
+
+        # Servir les fichiers média
+        location /media/ {
+            alias /app/media/;
+        }
+
+        # Proxy vers Django
         location / {
-            proxy_pass http://app:8000;  # app = nom du service dans docker-compose
+            proxy_pass http://django;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_redirect off;
         }
     }
 }
+
 ```
 
 **✅ Checkpoint** : `http://monapp.com` affiche votre application
 
+
+
+
+### **PHASE 7 : Gestion des fichiers statiques **
+
+```
+Comment faire en sorte que django accepte de "présenter" les fichiers
+statiques en production ? En local, django sert automatiquement les fichiers statiques,pas de configuration nécessaire, tout fonctionne "magiquement". En production, django refuse de servir les fichiers statiques (par design) pour des soucis de performance. Django n'est pas optimisé pour 
+servir des fichiers statiques. Raison pour laquelle on utilisera un serveur web Nginx pour cela.
+
+Nginx : Le portier/serveur (ultra rapide, léger, moderne, asynchrone)
+
+Reçoit TOUTES les requêtes HTTP/HTTPS
+Décide qui doit traiter quoi
+Sert les fichiers statiques lui-même (ultra rapide)
+Passe le reste à Django
+
+
+Gunicorn : Le coordinateur
+
+Interface entre Nginx et Django
+Gère plusieurs processus Django en parallèle
+Protocole WSGI (Web Server Gateway Interface)
+
+
+Django : Le cerveau
+
+Traite uniquement les requêtes dynamiques
+Génère les pages HTML personnalisées
+Communique avec la base de données
+
+```
+
+```python
+# Pensez à effectuer des modifications de votre fichier settings.py, c'est l'étape la plus délicate du processus
+import os # à ajouter
+BASE_DIR = Path(__file__).resolve().parent.parent 
+
+# SECURITY WARNING: keep the secret key used in production secret! Toujours garder cette variable, c'était ca la cause du bug !
+SECRET_KEY = os.environ.get('SECRET_KEY')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = False
+
+#ALLOWED_HOSTS = "Qui peut accéder à mon site ?"Par quel nom de domaine les gens peuvent accéder à ton serveur ? 
+ALLOWED_HOSTS = ['opus-symmetry.fr', 'www.opus-symmetry.fr','127.0.0.1']
+
+#CSRF_TRUSTED_ORIGINS = "Qui peut soumettre des formulaires sur mon site ?"
+CSRF_TRUSTED_ORIGINS = ["https://opus-symmetry.fr", "https://www.opus-symmetry.fr", "http://opus-symmetry.fr", "http://www.opus-symmetry.fr"]
+
+
+STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR/'staticfiles'
+
+
+STATICFILES_DIRS = [
+    BASE_DIR/"opus_symmetry/static",
+]
+
+# Vous ne devriez pas avoir de problèmes par la suite
+```
+
+```bash
+# Début boucle de relance (elle est partiellement correcte)
+
+# arrêter et supprimer tous les conteneurs, puis toutes les images non utilisées (nettoyage)
+docker compose down
+docker container prune
+docker docker image prune -a
+
+# Voir TOUS les containers (y compris arrêtés)
+docker ps -a
+# Voir toutes les images
+docker images
+
+# Après avoir mis à jour les paramètres de sécurité et push le code local, on le récupère dans l'ec2
+git fetch origin
+git reset --hard origin/main
+
+docker build -t joel_blog-web .
+docker compose up -d
+docker compose ps
+
+# Fin boucle 
+
+# Debuggage 
+# 1. Voir les logs en temps réel
+docker compose logs web -f
+docker compose logs web --tail=30
+
+```
+
+
 ---
 
-### **PHASE 7 : CERTIFICAT SSL (HTTPS)**
+### **PHASE 8 : CERTIFICAT SSL (HTTPS)**
 
 ```bash
 # Arrêter nginx temporairement
@@ -230,6 +464,167 @@ docker compose up -d
 **✅ Checkpoint** : `https://monapp.com` fonctionne avec le cadenas vert
 
 ---
+
+### **Dernière phase suggérée par Claude(HTTPS)**
+```bash
+#Étape 1 : Modifier docker-compose.yml
+nano docker-compose.yml
+```
+```yaml
+services:
+  web:
+    build: .
+    expose:
+      - 8000
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - .env
+    command: gunicorn --bind 0.0.0.0:8000 --workers 3 --access-logfile - --error-logfile - joel_blog.wsgi:application
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/app/staticfiles:ro
+      - media_volume:/app/media:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - web
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  static_volume:
+  media_volume:
+```
+```bash 
+#Étape 2 : Créer les dossiers certbot
+mkdir -p certbot/conf certbot/www
+
+#Étape 3 : Modifier nginx.conf (version temporaire)
+nano nginx/nginx.conf
+```
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80;
+        server_name opus-symmetry.fr www.opus-symmetry.fr;
+        
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+        
+        location / {
+            proxy_pass http://web:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}
+```
+```bash
+#Étape 4 : Relancer les services
+docker compose down
+docker compose up -d
+
+#Étape 5 : Obtenir le certificat SSL
+docker compose run --rm certbot certonly --webroot \
+  --webroot-path=/var/www/certbot \
+  -d opus-symmetry.fr -d www.opus-symmetry.fr \
+  --email joel@example.com \
+  --agree-tos \
+  --no-eff-email
+```
+
+**Remplace `email@example.com`** par ton vrai email.
+
+**Résultat attendu** :
+```
+Congratulations! Your certificate has been saved at:
+/etc/letsencrypt/live/opus-symmetry.fr/fullchain.pem
+
+```
+```bash
+#Étape 6 : Modifier nginx.conf (version finale avec HTTPS)
+nano nginx/nginx.conf
+```
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    # HTTP → Redirige vers HTTPS
+    server {
+        listen 80;
+        server_name opus-symmetry.fr www.opus-symmetry.fr;
+        
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+        
+        location / {
+            return 301 https://$host$request_uri;
+        }
+    }
+    
+    # HTTPS
+    server {
+        listen 443 ssl;
+        server_name opus-symmetry.fr www.opus-symmetry.fr;
+        
+        ssl_certificate /etc/letsencrypt/live/opus-symmetry.fr/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/opus-symmetry.fr/privkey.pem;
+        
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers on;
+        
+        location / {
+            proxy_pass http://web:8000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto https;
+        }
+        
+        location /static/ {
+            alias /app/staticfiles/;
+        }
+        
+        location /media/ {
+            alias /app/media/;
+        }
+    }
+}
+```
+```bash
+#Étape 7 : Redémarrer nginx
+docker compose restart nginx
+#Étape 8 : Tester
+docker compose restart web
+#Ouvre ton navigateur : https://opus-symmetry.fr
+```
+
+
+
+
+
+
 
 ## 🎓 Les Bonnes Pratiques Essentielles
 
