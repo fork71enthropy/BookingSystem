@@ -445,6 +445,8 @@ docker compose logs web --tail=30
 
 
 ```bash
+
+
 # Création du fichier .gitignore (j'avais oublié)
 nano .gitignore
 
@@ -524,6 +526,8 @@ docker compose up -d
 
 ### **Dernière phase suggérée par Claude(HTTPS)**
 ```bash
+
+#Etape 0 : Créer le fichier .gitignore pour des raisons de sécurité (je l'ai fait dans le step 8, à recopier ici)
 #Étape 1 : Modifier docker-compose.yml
 nano docker-compose.yml
 ```
@@ -595,17 +599,28 @@ http {
 }
 ```
 ```bash
-#Étape 4 : Relancer les services
-docker compose down
-docker compose up -d
 
-#Étape 5 : Obtenir le certificat SSL
-docker compose run --rm certbot certonly --webroot \
-  --webroot-path=/var/www/certbot \
+
+# Etape 4. TOUT arrêter
+docker compose down
+
+# Etape 5. Supprimer BRUTALEMENT certbot (au cas où il y a des fichiers cachés)
+sudo rm -rf certbot/
+mkdir -p certbot/conf certbot/www
+
+# Etape 6. Créer le certificat standalone (SANS nginx qui tourne)
+docker run --rm -it \
+  -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+  -v "$(pwd)/certbot/www:/var/www/certbot" \
+  -p 80:80 \
+  certbot/certbot certonly --standalone \
   -d opus-symmetry.fr -d www.opus-symmetry.fr \
-  --email joel@example.com \
+  --email julientelook@gmail.com \
   --agree-tos \
   --no-eff-email
+
+
+
 ```
 
 **Remplace `email@example.com`** par ton vrai email.
@@ -617,7 +632,7 @@ Congratulations! Your certificate has been saved at:
 
 ```
 ```bash
-#Étape 6 : Modifier nginx.conf (version finale avec HTTPS)
+#Étape 7 : Modifier nginx.conf (version finale avec HTTPS)
 nano nginx/nginx.conf
 ```
 ```nginx
@@ -670,13 +685,46 @@ http {
 }
 ```
 ```bash
-#Étape 7 : Redémarrer nginx
+#Étape 8 : Redémarrer nginx
 docker compose restart nginx
-#Étape 8 : Tester
+#Étape 9 : Tester
 docker compose restart web
 #Ouvre ton navigateur : https://opus-symmetry.fr
+
+#debugging
+docker compose logs nginx
+docker compose logs web
+
+
+#J'obtiens une erreur : 
+# => ERROR [internal] load build context                          0.0s
+#ERROR: failed to solve: error from sender: open certbot/conf/accounts: permission denied
+# 1. Donner les bonnes permissions au dossier certbot
+sudo chown -R monuser:monuser certbot/
+sudo chmod -R 755 certbot/
+
+# 2. Vérifier
+ls -la certbot/
 ```
 
+## Un site moche pas mis en page (les fichiers statiques ne sont pas chargés) ... Comment y remédier ? 
+
+### ✅ Vérifier et collecter les fichiers statiques
+```bash
+# 1. Collecter les fichiers statiques
+docker compose exec web python manage.py collectstatic --noinput
+
+# 2. Vérifier qu'ils sont bien là dans le container web
+docker compose exec web ls -la /app/staticfiles/
+
+# 3. Vérifier qu'ils sont bien là dans nginx
+docker compose exec nginx ls -la /app/staticfiles/
+
+# 4. Vider le cache du navigateur ctrl+R+shift
+
+```
+
+### Si à ce niveau vous n'avez pas un site mis en page avec rendu des fichiers statics, contactez moi directement
 
 
 
