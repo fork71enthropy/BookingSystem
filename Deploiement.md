@@ -720,7 +720,9 @@ docker compose exec web ls -la /app/staticfiles/
 # 3. Vérifier qu'ils sont bien là dans nginx
 docker compose exec nginx ls -la /app/staticfiles/
 
-# 4. Vider le cache du navigateur ctrl+R+shift
+# 4. Vider le cache du navigateur ctrl+R+shift, ca devrait fonctionner
+
+# 5. Fermer la session ssh avec "exit"
 
 ```
 
